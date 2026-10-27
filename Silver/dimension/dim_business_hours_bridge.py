@@ -41,7 +41,7 @@ df_read_dim_business_hours = spark.read.parquet("D:/A_Data_engineer/Project_Yelp
 df_hours = df_read_business_data.select(F.col("hours"),F.col("business_id"))
 
 
-# In[ ]:
+# In[4]:
 
 
 # --- Silver: parse operating hours schedule into 7-day normalized arrays ---
@@ -192,7 +192,6 @@ df_elite = (
 
 
 
-
 # In[ ]:
 
 
@@ -220,48 +219,28 @@ join_condition =  ((df_explode["day_name"] == df_read_dim_business_hours["day_na
                  & (df_explode["shift_end_hour"] == df_read_dim_business_hours["shift_end_hour"] ) )
 
 
-
-
+# composite inner join matches day and operating time bounds to lookup the hours dimension surrogate key
 merged_join= df_explode.join(df_read_dim_business_hours, join_condition, "inner")
-
 
 df_final = merged_join.select(F.col("business_id") ,F.col("business_hours_pk_sk"))
 
-
-# In[ ]:
-
-
-# --- Silver: incremental dimension loading and surrogate key generation ---
-
-mx =  df_read_dim_business_hours.agg(F.max("business_hours_pk_sk").alias("max_business_hours_pk_sk")).first()
+join_condition =  (df_final["Business_id"] == df_read_dim_business_data["Business_id"]  )
 
 
 # In[ ]:
 
 
-# LeftAnti join identifies novel schedule time intervals absent from the existing dimension table
-# Join source and target on ID
-join_condition =  ((df_explode["day_name"] == df_read_dim_business_hours["day_name"]  )
-                 & (df_explode["shift_start_hour"] == df_read_dim_business_hours["shift_start_hour"]) 
-                 & (df_explode["shift_end_hour"] == df_read_dim_business_hours["shift_end_hour"] ) )
+# --- Silver: resolve business surrogate key and assemble bridge table ---
+# inner join resolves natural business identifier to Business_pk_sk to build the bridge mapping
+merged_df = df_final.join(df_read_dim_business_data, join_condition, "inner").select("business_hours_pk_sk","Business_pk_sk")
 
-
-
-merged_df = df_explode.join(df_read_dim_business_hours, join_condition, "LeftAnti")
 
 
 # In[ ]:
 
 
-# offsets IDs using the current maximum dimension key to guarantee global surrogate key uniqueness across incremental runs
-mx =  df_read_dim_business_hours.agg(F.max("business_hours_pk_sk").alias("max_business_hours_pk_sk")).first().max_business_hours_pk_sk
-merged_df_2 = merged_df.withColumn("business_hours_pk_sk", F.monotonically_increasing_id() + F.lit(mx + 1))
-
-
-# In[ ]:
-
-
-merged_df_2.write.mode("append").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business_hours")
+# --- Silver: write business_hours_bridge to parquet storage ---
+#merged_df.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business_hours_bridge")
 
 
 # In[ ]:

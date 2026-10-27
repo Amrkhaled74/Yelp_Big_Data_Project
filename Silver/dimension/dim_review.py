@@ -44,4 +44,4 @@ df_surrogate_key = df_clean.withColumn("review_pk_sk", F.monotonically_increasin
 df_final = df_surrogate_key.select(F.col("review_pk_sk"),F.col("review_id"),F.col("text_clean").alias("review"))    
 
 # --- Silver: write dim_review to parquet storage ---
-df_final.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_review")
+#df_final.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_review")

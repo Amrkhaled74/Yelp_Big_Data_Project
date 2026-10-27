@@ -46,4 +46,4 @@ df_add_surrogate_key = df.withColumn("Date_pk_sk", F.monotonically_increasing_id
 df_final = df_add_surrogate_key.select(F.col("Date_pk_sk") , F.col("Date") , F.col("Year") , F.col("Month") , F.col("Day") )
 
 # --- Silver: write dim_date to parquet storage ---
-df_final.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_date")
+#df_final.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_date")

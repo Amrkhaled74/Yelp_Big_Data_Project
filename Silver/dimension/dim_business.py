@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[2]:
 
 
 # Set up all required functions
@@ -21,11 +21,10 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
 
 from itertools import chain
 
-import sys
 from pathlib import Path
 
 
-# In[ ]:
+# In[3]:
 
 
 # --- Environment setup: configure paths and initialize Spark ---
@@ -40,14 +39,14 @@ from configuration import get_spark_session
 spark = get_spark_session("pyspark_yelp")
 
 
-# In[ ]:
+# In[4]:
 
 
 # --- Bronze layer: load raw business dataset ---
 df_read_business_data = spark.read.json("D:\\A_Data_engineer\\Project_Yelp\\Yelp JSON\\yelp_academic_dataset_business.json")
 
 
-# In[ ]:
+# In[5]:
 
 
 # --- Silver: sanitize address values ---
@@ -65,7 +64,7 @@ df_modify_address = df_read_business_data.withColumn(
 )
 
 
-# In[ ]:
+# In[6]:
 
 
 # --- Silver: standardize city names and strip administrative noise ---
@@ -100,7 +99,7 @@ for old, new in replacements.items():
 df_city = df_modify_address.withColumn("cleaned_city", F.trim(expr))
 
 
-# In[ ]:
+# In[7]:
 
 
 # --- Silver: validate state values against postal code leakages ---
@@ -115,7 +114,7 @@ df_state = df_city.withColumn(
 )
 
 
-# In[ ]:
+# In[8]:
 
 
 # --- Silver: load geographic reference lookup table ---
@@ -125,7 +124,7 @@ df_state_teritory = spark.read \
     .csv("D:\\A_Data_engineer\\Project_Yelp\\US_GeoCode.csv")
 
 
-# In[ ]:
+# In[9]:
 
 
 # --- Silver: impute missing or out-of-bounds latitude coordinates ---
@@ -147,7 +146,7 @@ df_latitude = df_state.withColumn(
 )
 
 
-# In[ ]:
+# In[10]:
 
 
 # --- Silver: impute missing or out-of-bounds longitude coordinates ---
@@ -169,7 +168,7 @@ df_longitude = df_latitude.withColumn(
 )
 
 
-# In[ ]:
+# In[11]:
 
 
 # --- Silver: validate ratings, review counts, and operational flags ---
@@ -399,16 +398,16 @@ df_Business_surrogate_key = df_Business_Attribute.withColumn("Business_pk_sk", F
 # --- Silver: project final business dimension schema ---
 df_Business = df_Business_surrogate_key.select(
     F.col("Business_pk_sk"),
-
+    
     F.col("business_id").alias("Business_id"),
     F.col("name").alias("Business_name"),   
-
+    F.col("cleaned_city").alias("city"),
     F.col("new_state").alias("State"),
     F.col("postal_code"),
-
+    
     F.col("new_stars").alias("Business_stars"),
     F.col("new_review_count").alias("Business_review_count"),
-
+    
     F.col("new_RestaurantsPriceRange").alias("Business_price_range"),
     F.col("new_wifi").alias("Business_wifi"),
     F.col("new_alcohol").alias("Business_alcohol"),
@@ -421,9 +420,10 @@ df_Business = df_Business_surrogate_key.select(
     F.col("new_OutdoorSeating").alias("Business_seating"),
     F.col("new_BusinessParking").alias("Business_parking"),
     F.col("new_Open24Hours").alias("Business_open24hours"),
-
+    
     F.col("new_is_open").alias("Business_is_open"),
 )
+
 
 
 
@@ -431,7 +431,7 @@ df_Business = df_Business_surrogate_key.select(
 
 
 # --- Silver: write dim_business to parquet storage ---
-df_Business.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business")
+#df_Business.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business")
 
 
 # In[ ]:

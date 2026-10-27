@@ -101,4 +101,4 @@ df_select_user_friend_pk = df_user_friends_with_keys.select(
     F.col("User_pk_sk").alias("User_pk")
 )
 
-df_select_user_friend_pk.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_user_friend")
+#df_select_user_friend_pk.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_user_friend")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 # Set up all required functions
@@ -13,7 +13,7 @@ from itertools import chain
 from pathlib import Path
 
 
-# In[ ]:
+# In[2]:
 
 
 # --- Environment setup: configure paths and initialize Spark ---
@@ -28,7 +28,7 @@ from configuration import get_spark_session
 spark = get_spark_session("pyspark_yelp")
 
 
-# In[ ]:
+# In[3]:
 
 
 # --- Silver: load dimension tables and raw categories source ---
@@ -41,7 +41,7 @@ df_read_business_data = spark.read.json("D:/A_Data_engineer/Project_Yelp/Yelp JS
 df_categories = df_read_business_data.select(F.col("categories"))
 
 
-# In[ ]:
+# In[4]:
 
 
 # --- Silver: extract primary category and subcategories via UDF ---
@@ -97,7 +97,7 @@ df_category_subcategory_names = (
 df_category_subcategory_names.show(20, truncate=False)
 
 
-# In[ ]:
+# In[5]:
 
 
 # --- Silver: resolve category and subcategory surrogate keys ---
@@ -105,26 +105,38 @@ df_category_subcategory_names.show(20, truncate=False)
 df_join_get_category_sk = df_category_subcategory_names.join(df_dim_category,on = df_dim_category.Category_name == df_category_subcategory_names.Categorie_name ,how= "inner" )
 
 
-# In[ ]:
+# In[6]:
+
+
+df_dim_subcategory.columns
+
+
+# In[7]:
 
 
 # inner join resolves the subcategory string to its Subcategory_pk_sk surrogate key
 df_join_get_subcategory_sk = df_join_get_category_sk.join(df_dim_subcategory,on = df_join_get_category_sk.subcategory_names == df_dim_subcategory.subcategory_name ,how= "inner" )
 
 
-# In[ ]:
+# In[8]:
 
 
 # --- Silver: assemble bridge table schema ---
 df_category_subcategory_bridge = df_join_get_subcategory_sk.select(F.col("Category_pk_sk") , F.col("Subcategory_pk_sk") )
 
 
-# In[ ]:
+# In[10]:
 
 
 # --- Silver: write df_category_subcategory_bridge to parquet storage ---
 
-df_category_subcategory_bridge.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_category_subcategory_bridge")
+#df_category_subcategory_bridge.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_category_subcategory_bridge")
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:

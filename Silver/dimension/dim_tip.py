@@ -44,4 +44,4 @@ df_surrogate_key = df_clean.withColumn("tips_pk_sk", F.monotonically_increasing_
 df_final = df_surrogate_key.select(F.col("tips_pk_sk"),F.col("text_clean").alias("Text"))
 
 # --- Silver: write dim_tips to parquet storage ---
-df_final.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_tips")
+#df_final.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_tips")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[26]:
 
 
 # Set up all required functions
@@ -12,7 +12,7 @@ from pyspark.sql.types import StringType
 from pathlib import Path
 
 
-# In[ ]:
+# In[27]:
 
 
 # --- Environment setup: configure paths and initialize Spark ---
@@ -31,8 +31,7 @@ spark = get_spark_session("pyspark_yelp")
 
 
 # --- Bronze layer: load business source data ---
-df_read_business_data = spark.read.json("D:\\A_Data_engineer\\Project_Yelp\\Yelp JSON\\yelp_academic_dataset_business.json")
-
+df_read_business_data = spark.read.parquet("D:\\A_Data_engineer\\Project_Yelp\\store_dimesnion_user\\Bronze_Store\\business")
 df_categories = df_read_business_data.select(F.col("categories"))
 
 
@@ -49,8 +48,7 @@ def get_category_name(text):
     Input is a raw comma-separated string; returns the trimmed primary category name as a string.
     """
     if text is None:
-       # NOTE: purpose unclear
-       return "Not Specified", ["Not Specified"]
+       return "Not Specified"
 
     # first element is defined as the primary category in the Yelp category hierarchy
     list_of_element = text.split(",")
@@ -65,14 +63,14 @@ def get_category_name(text):
 df_Category_name = df_categories.withColumn("Category_name", get_category_name(F.col("categories"))).drop(F.col("categories"))
 
 
-# In[ ]:
+# In[30]:
 
 
 # deduplication ensures each category has exactly one entry before surrogate key allocation
 df_distinct_Category_name = df_Category_name.select("Category_name").distinct()
 
 
-# In[ ]:
+# In[33]:
 
 
 # --- Silver: generate surrogate key for dim_category ---
@@ -80,11 +78,17 @@ df_distinct_Category_name = df_Category_name.select("Category_name").distinct()
 df_surrogate_key = df_distinct_Category_name.withColumn("Category_pk_sk", F.monotonically_increasing_id() + 1)
 
 
-# In[ ]:
+# In[34]:
 
 
 # --- Silver: write dim_category to parquet storage ---
-df_surrogate_key.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_category")
+#df_surrogate_key.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_category")
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
