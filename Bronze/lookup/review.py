@@ -31,7 +31,7 @@ df_read_review_data = spark.read.json("D:\\A_Data_engineer\\Project_Yelp\\Yelp J
 
 
 # Write the DataFrame to Parquet format
-df_read_review_data.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/Bronze_Store/review")
+#df_read_review_data.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/Bronze_Store/review")
 
 
 # In[ ]:

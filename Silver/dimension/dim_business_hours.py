@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 # Set up all required functions
@@ -14,7 +14,7 @@ from pyspark.sql.types import StructType, StructField, StringType, ArrayType
 from pathlib import Path
 
 
-# In[ ]:
+# In[2]:
 
 
 # --- Environment setup: configure paths and initialize Spark ---
@@ -29,7 +29,7 @@ from configuration import get_spark_session
 spark = get_spark_session("pyspark_yelp")
 
 
-# In[ ]:
+# In[5]:
 
 
 # --- Bronze layer: load business source data and target dimensions ---
@@ -37,7 +37,6 @@ df_read_business_data = spark.read.json("D:\\A_Data_engineer\\Project_Yelp\\Yelp
 
 df_read_dim_business_data  = spark.read.parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business")
 
-df_read_business_data.columns
 
 df_hours = df_read_business_data.select(F.col("hours"),F.col("business_id"))
 
@@ -193,8 +192,6 @@ df_elite = (
       .withColumn("shift_end_hour", (F.col("new_eilte.shift_end_hour")))
 ).drop(F.col("new_eilte")).cache()  
 
-df_elite.show(n=1000,truncate=False)
-
 
 # In[ ]:
 
@@ -214,7 +211,7 @@ df_explode = (
 df_explode.show(truncate=False)
 
 
-# In[ ]:
+# In[8]:
 
 
 # --- Silver: initial load surrogate key generation ---
@@ -222,12 +219,6 @@ df_explode.show(truncate=False)
 df_add_sk= df_explode.withColumn("business_hours_pk_sk", F.monotonically_increasing_id() + 1)  
 
 df_business_hours = df_add_sk.select(F.col("business_hours_pk_sk"),F.col("day_name"),F.col("shift_start_hour"),F.col("shift_end_hour"))
-
-
-# In[ ]:
-
-
-#df_business_hours.write.mode("append").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business_hours")
 
 
 # In[ ]:
@@ -244,33 +235,37 @@ except :
     is_empty = True
 
 if is_empty:
-     df_business_hours.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business_hours")
+     # initializes dimension store on first pipeline run
+     print("")
+     #df_business_hours.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business_hours")
 
 else:
 
     df_read_dim_business_hours = spark.read.parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business_hours")
     # LeftAnti join isolates new schedule shifts that do not already exist in the target dimension
     # Join source and target on ID
-    join_condition =  ((df_explode["day_name"] == df_read_dim_business_hours["day_name"]  )
-                    & (df_explode["shift_start_hour"] == df_read_dim_business_hours["shift_start_hour"]) 
-                    & (df_explode["shift_end_hour"] == df_read_dim_business_hours["shift_end_hour"] ) )
+    join_condition =  ((df_business_hours["day_name"] == df_read_dim_business_hours["day_name"]  )
+                    & (df_business_hours["shift_start_hour"] == df_read_dim_business_hours["shift_start_hour"]) 
+                    & (df_business_hours["shift_end_hour"] == df_read_dim_business_hours["shift_end_hour"] ) )
 
 
 
 
-    merged_df = df_explode.join(df_read_dim_business_hours, join_condition, "LeftAnti")
+    # identifies schedule shifts present in incoming batch but absent from target storage
+    merged_df = df_business_hours.join(df_read_dim_business_hours, join_condition, "LeftAnti")
+    # guard prevents executing unnecessary driver actions and writing empty partition files
+    if not merged_df.isEmpty ():
+        # 1. Coalesce converts NULL max values to 0 on the Spark side
+        row = df_read_dim_business_hours.agg(
+            F.coalesce(F.max("business_hours_pk_sk"), F.lit(0)).alias("max_business_hours_pk_sk")
+        ).first()
+        # offsets surrogate keys from existing maximum to maintain continuous unique keys on append
+        # 2. Python fallback handles cases where the DataFrame has no rows at all
+        mx = row.max_business_hours_pk_sk if (row and row.max_business_hours_pk_sk is not None) else 0
+        merged_df_2 = merged_df.withColumn("business_hours_pk_sk", F.monotonically_increasing_id() + F.lit(mx + 1))
 
-    # 1. Coalesce converts NULL max values to 0 on the Spark side
-    row = df_read_dim_business_hours.agg(
-        F.coalesce(F.max("business_hours_pk_sk"), F.lit(0)).alias("max_business_hours_pk_sk")
-    ).first()
-
-    # offsets surrogate keys from existing maximum to maintain continuous unique keys on append
-    # 2. Python fallback handles cases where the DataFrame has no rows at all
-    mx = row.max_business_hours_pk_sk if (row and row.max_business_hours_pk_sk is not None) else 0
-    merged_df_2 = merged_df.withColumn("business_hours_pk_sk", F.monotonically_increasing_id() + F.lit(mx + 1))
-
-    merged_df_2.write.mode("append").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business_hours")
+        # appends novel operating shift records into the existing parquet dimension store
+       # merged_df_2.write.mode("append").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_business_hours")
 
 
 # In[ ]:

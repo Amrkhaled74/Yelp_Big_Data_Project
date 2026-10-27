@@ -214,4 +214,4 @@ df_user = df_add_surrogate_key.select(
 )
 
 # --- Silver: write dim_user to parquet storage ---
-df_user.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_user")
+#df_user.write.mode("overwrite").parquet("D:/A_Data_engineer/Project_Yelp/store_dimesnion_user/dim_user")
